@@ -1,0 +1,1770 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Software Architecture Styles & Patterns</title>
+    <style>
+      :root {
+        --bg: #eef2f7;
+        --ink: #1b2a41;
+        --muted: #5a6b82;
+        --pro: #1e9e5a;
+        --con: #d64545;
+        --navy: #14213d;
+        --ease: cubic-bezier(0.65, 0, 0.35, 1);
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        font-family: "Segoe UI", Roboto, Arial, sans-serif;
+        background: linear-gradient(135deg, #eef2f7 0%, #e3e9f3 100%);
+        color: var(--ink);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Top bar + progress */
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 24px;
+        background: var(--navy);
+        color: #fff;
+        flex-shrink: 0;
+      }
+      .topbar h1 {
+        font-size: 1.05rem;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+      }
+      .topbar .where {
+        font-size: 0.85rem;
+        opacity: 0.85;
+        white-space: nowrap;
+      }
+      .progress {
+        height: 4px;
+        background: #cfd8e6;
+        flex-shrink: 0;
+      }
+      .progress span {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: linear-gradient(90deg, #1db954, #0b6fb8, #d1495b);
+        transition: width 0.7s var(--ease);
+      }
+
+      /* Stage + slides */
+      .stage {
+        position: relative;
+        flex: 1;
+        overflow: hidden;
+      }
+      .slide {
+        position: absolute;
+        inset: 0;
+        overflow-y: auto;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateX(12%) scale(0.96);
+        transition:
+          transform 0.7s var(--ease),
+          opacity 0.7s var(--ease),
+          visibility 0s linear 0.7s;
+      }
+      .slide.before {
+        transform: translateX(-12%) scale(0.96);
+      }
+      .slide.after {
+        transform: translateX(12%) scale(0.96);
+      }
+      .slide.active {
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+        transition-delay: 0s;
+      }
+      .page {
+        max-width: 1220px;
+        margin: 0 auto;
+        padding: 22px 26px 30px;
+      }
+
+      /* Staggered content entrance */
+      .anim {
+        opacity: 0;
+        transform: translateY(18px);
+        transition:
+          opacity 0.55s ease,
+          transform 0.55s ease;
+        transition-delay: 0s;
+      }
+      .slide.active .anim {
+        opacity: 1;
+        transform: none;
+        transition-delay: calc(var(--d, 0) * 90ms + 250ms);
+      }
+
+      /* Detail page */
+      .dhead {
+        --c: inherit;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        background: var(--c);
+        color: #fff;
+        border-radius: 18px;
+        padding: 18px 24px;
+        box-shadow: 0 8px 24px rgba(20, 33, 61, 0.15);
+      }
+      .num {
+        background: rgba(255, 255, 255, 0.25);
+        border-radius: 50%;
+        width: 44px;
+        height: 44px;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+      }
+      .dhead .icon {
+        font-size: 2.4rem;
+      }
+      .dhead h2 {
+        font-size: 1.9rem;
+        line-height: 1.15;
+      }
+      .dhead small {
+        display: block;
+        font-size: 0.95rem;
+        opacity: 0.9;
+        font-weight: 400;
+      }
+      .main {
+        display: grid;
+        grid-template-columns: 1fr 1.15fr;
+        gap: 22px;
+        margin-top: 20px;
+        align-items: start;
+      }
+      .left {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .summary {
+        font-size: 1.05rem;
+        color: var(--ink);
+        line-height: 1.55;
+        background: #fff;
+        border-radius: 14px;
+        padding: 16px 18px;
+        box-shadow: 0 4px 14px rgba(27, 42, 65, 0.06);
+      }
+      .ref {
+        background: #fff;
+        border-radius: 14px;
+        padding: 14px 14px 8px;
+        box-shadow: 0 4px 14px rgba(27, 42, 65, 0.06);
+        border-top: 4px solid var(--c);
+      }
+      .ref h3 {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.7px;
+        color: var(--c);
+        margin: 0 0 6px 4px;
+      }
+      .ref svg {
+        width: 100%;
+        height: auto;
+        max-height: 48vh;
+        display: block;
+      }
+      .ex {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        background: #fff8e6;
+        border-left: 5px solid var(--c);
+        border-radius: 12px;
+        padding: 14px 16px;
+      }
+      .ex .eicon {
+        font-size: 2rem;
+        line-height: 1;
+      }
+      .ex h3 {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.7px;
+        color: #a06a00;
+        margin-bottom: 3px;
+      }
+      .ex strong {
+        display: block;
+        font-size: 1.02rem;
+      }
+      .ex p {
+        font-size: 0.92rem;
+        color: var(--muted);
+        line-height: 1.45;
+        margin-top: 3px;
+      }
+      .cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .box {
+        border-radius: 12px;
+        padding: 12px 14px;
+        font-size: 0.92rem;
+      }
+      .box h3 {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.7px;
+        margin-bottom: 6px;
+      }
+      .box ul {
+        list-style: none;
+      }
+      .box li {
+        margin: 5px 0;
+        padding-left: 20px;
+        position: relative;
+        line-height: 1.4;
+      }
+      .pros {
+        background: #e8f7ef;
+      }
+      .pros h3 {
+        color: var(--pro);
+      }
+      .pros li::before {
+        content: "✔";
+        color: var(--pro);
+        position: absolute;
+        left: 0;
+      }
+      .cons {
+        background: #fdecec;
+      }
+      .cons h3 {
+        color: var(--con);
+      }
+      .cons li::before {
+        content: "✖";
+        color: var(--con);
+        position: absolute;
+        left: 0;
+      }
+
+      /* Summary page */
+      .shead {
+        text-align: center;
+        margin-bottom: 18px;
+      }
+      .shead h2 {
+        font-size: 1.9rem;
+      }
+      .shead p {
+        color: var(--muted);
+        margin-top: 6px;
+      }
+      .legend {
+        display: flex;
+        justify-content: center;
+        gap: 18px;
+        margin-top: 10px;
+        font-size: 0.85rem;
+        flex-wrap: wrap;
+        color: var(--muted);
+      }
+      .sgrid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 14px;
+      }
+      .mini {
+        --c: #333;
+        text-align: left;
+        font: inherit;
+        color: inherit;
+        background: #fff;
+        border: none;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 4px 14px rgba(27, 42, 65, 0.08);
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+      }
+      .mini:hover,
+      .mini:focus-visible {
+        box-shadow: 0 10px 24px rgba(27, 42, 65, 0.18);
+        outline: 2px solid var(--c);
+      }
+      .slide.active .mini.anim:hover {
+        transform: translateY(-4px);
+        transition-delay: 0s;
+      }
+      .mini .mh {
+        background: var(--c);
+        color: #fff;
+        padding: 10px 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .mini .mh b {
+        font-size: 0.95rem;
+        line-height: 1.15;
+      }
+      .mini .mh i {
+        font-style: normal;
+        font-size: 1.3rem;
+      }
+      .mini .mh em {
+        font-style: normal;
+        font-size: 0.72rem;
+        opacity: 0.85;
+        display: block;
+        font-weight: 400;
+      }
+      .mini .mb {
+        padding: 10px 12px 12px;
+        font-size: 0.8rem;
+        line-height: 1.4;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex: 1;
+      }
+      .mini .ess {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .mini .row {
+        color: var(--muted);
+      }
+      .mini .row.p::before {
+        content: "✔ ";
+        color: var(--pro);
+        font-weight: 700;
+      }
+      .mini .row.c::before {
+        content: "✖ ";
+        color: var(--con);
+        font-weight: 700;
+      }
+      .mini .row.e::before {
+        content: "🌍 ";
+      }
+      .hint {
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.82rem;
+        margin-top: 16px;
+      }
+      kbd {
+        background: #fff;
+        border: 1px solid #c9d3e0;
+        border-radius: 4px;
+        padding: 1px 6px;
+        font-size: 0.78rem;
+      }
+
+      /* Navigation */
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        padding: 10px 16px;
+        background: #fff;
+        border-top: 1px solid #dbe2ec;
+        flex-shrink: 0;
+        flex-wrap: wrap;
+      }
+      .nav button.btn {
+        font: inherit;
+        font-size: 0.9rem;
+        border: none;
+        border-radius: 999px;
+        padding: 8px 18px;
+        cursor: pointer;
+        background: var(--navy);
+        color: #fff;
+        transition:
+          background 0.2s,
+          opacity 0.2s;
+      }
+      .nav button.btn:hover:not(:disabled) {
+        background: #0b6fb8;
+      }
+      .nav button.btn:disabled {
+        opacity: 0.35;
+        cursor: default;
+      }
+      .nav button.btn.ghost {
+        background: #e7edf5;
+        color: var(--navy);
+      }
+      .dots {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .dot {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        border: none;
+        background: #c3cedd;
+        cursor: pointer;
+        transition:
+          transform 0.3s,
+          background 0.3s,
+          width 0.3s;
+      }
+      .dot.on {
+        background: var(--navy);
+        width: 28px;
+        border-radius: 6px;
+      }
+      .dot:hover {
+        transform: scale(1.25);
+      }
+
+      /* Diagram styles */
+      .d text {
+        font-size: 9px;
+        text-anchor: middle;
+        dominant-baseline: middle;
+        fill: #1b2a41;
+        font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      }
+      .d text.s {
+        font-size: 7.5px;
+        fill: #5a6b82;
+      }
+      .d text.w {
+        fill: #fff;
+        font-weight: 600;
+      }
+      .d text.ws {
+        fill: #fff;
+        font-size: 7.5px;
+      }
+      .d text.lbl {
+        font-size: 7.5px;
+        fill: #5a6b82;
+        font-style: italic;
+      }
+      .d .b {
+        fill: #fff;
+        stroke: var(--c);
+        stroke-width: 1.5;
+      }
+      .d .f {
+        fill: var(--c);
+        stroke: var(--c);
+      }
+      .d .ln {
+        stroke: #7a8aa0;
+        stroke-width: 1.3;
+        fill: none;
+        marker-end: url(#arr);
+      }
+      .d .bi {
+        marker-start: url(#arr);
+      }
+      .d .pl {
+        stroke: #9fb0c4;
+        stroke-width: 1.2;
+        fill: none;
+      }
+
+      /* Diagram animations (replay each time a page becomes active) */
+      @keyframes pop {
+        from {
+          opacity: 0;
+          transform: scale(0.55);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      @keyframes fade {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes draw {
+        to {
+          stroke-dashoffset: 0;
+        }
+      }
+      .d > rect,
+      .d > circle {
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+      .slide.active .d > rect,
+      .slide.active .d > circle {
+        animation: pop 0.5s cubic-bezier(0.3, 1.4, 0.6, 1) both;
+        animation-delay: 0.4s;
+      }
+      .slide.active .d > rect:nth-of-type(2),
+      .slide.active .d > circle:nth-of-type(2) {
+        animation-delay: 0.48s;
+      }
+      .slide.active .d > rect:nth-of-type(3),
+      .slide.active .d > circle:nth-of-type(3) {
+        animation-delay: 0.56s;
+      }
+      .slide.active .d > rect:nth-of-type(4),
+      .slide.active .d > circle:nth-of-type(4) {
+        animation-delay: 0.64s;
+      }
+      .slide.active .d > rect:nth-of-type(5),
+      .slide.active .d > circle:nth-of-type(5) {
+        animation-delay: 0.72s;
+      }
+      .slide.active .d > rect:nth-of-type(n + 6) {
+        animation-delay: 0.8s;
+      }
+      .slide.active .d text {
+        animation: fade 0.45s ease both;
+        animation-delay: 0.75s;
+      }
+      .slide .d .ln,
+      .slide .d .pl line {
+        stroke-dasharray: 320;
+        stroke-dashoffset: 320;
+      }
+      .slide.active .d .ln,
+      .slide.active .d .pl line {
+        animation:
+          draw 1s ease forwards,
+          fade 0.3s ease both;
+        animation-delay: 0.95s;
+      }
+      .d .dash {
+        stroke-dasharray: 3 2 !important;
+        stroke-dashoffset: 0 !important;
+      }
+
+      @media (max-width: 1100px) {
+        .sgrid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+      @media (max-width: 900px) {
+        .main {
+          grid-template-columns: 1fr;
+        }
+        .dhead h2 {
+          font-size: 1.5rem;
+        }
+      }
+      @media (max-width: 640px) {
+        .sgrid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .cols {
+          grid-template-columns: 1fr;
+        }
+        .topbar h1 {
+          font-size: 0.9rem;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+        .slide .d .ln,
+        .slide .d .pl line {
+          stroke-dashoffset: 0;
+        }
+      }
+
+      @media print {
+        html,
+        body {
+          height: auto;
+          overflow: visible;
+          background: #fff;
+          display: block;
+        }
+        .topbar,
+        .progress,
+        .nav {
+          display: none;
+        }
+        .stage {
+          overflow: visible;
+        }
+        .slide {
+          position: static;
+          opacity: 1 !important;
+          visibility: visible !important;
+          transform: none !important;
+          overflow: visible;
+          break-after: page;
+        }
+        .anim {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+        .slide .d .ln,
+        .slide .d .pl line {
+          stroke-dashoffset: 0;
+        }
+        .summary,
+        .ref,
+        .mini {
+          box-shadow: none;
+          border: 1px solid #ddd;
+        }
+        .sgrid {
+          grid-template-columns: repeat(5, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- shared arrow marker -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <marker
+          id="arr"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto-start-reverse"
+        >
+          <path d="M0,0 L10,5 L0,10 z" fill="#7a8aa0" />
+        </marker>
+      </defs>
+    </svg>
+
+    <header class="topbar">
+      <h1>🏛️ Software Architecture Styles &amp; Patterns</h1>
+      <span class="where" id="where" aria-live="polite"></span>
+    </header>
+    <div class="progress"><span id="bar"></span></div>
+
+    <main class="stage" id="stage">
+      <!-- ================= SUMMARY ================= -->
+      <section class="slide" data-title="Summary">
+        <div class="page">
+          <div class="shead anim" style="--d: 0">
+            <h2>Summary: All 10 Architecture Styles at a Glance</h2>
+            <p>
+              Short version of every style. Click a card to open its full page.
+            </p>
+            <div class="legend">
+              <span>🌍 Real-life example</span
+              ><span><b style="color: var(--pro)">✔</b> Key pro</span
+              ><span><b style="color: var(--con)">✖</b> Key con</span>
+            </div>
+          </div>
+          <div class="sgrid">
+            <button class="mini anim" style="--c: #1f4e8c; --d: 1" data-go="1">
+              <div class="mh">
+                <i>🧱</i><b>1. Layered<em>N-tier</em></b>
+              </div>
+              <div class="mb">
+                <span class="ess"
+                  >Stacked layers; each uses only the one below.</span
+                ><span class="row e">Android OS stack</span
+                ><span class="row p">Separation of concerns</span
+                ><span class="row c">Overhead &amp; rigid layers</span>
+              </div>
+            </button>
+            <button class="mini anim" style="--c: #0f7c8c; --d: 2" data-go="2">
+              <div class="mh"><i>🖥️</i><b>2. Client-Server</b></div>
+              <div class="mb">
+                <span class="ess"
+                  >Clients request; a central server responds.</span
+                ><span class="row e">The Web &amp; email</span
+                ><span class="row p">Central control &amp; security</span
+                ><span class="row c">Single point of failure</span>
+              </div>
+            </button>
+            <button class="mini anim" style="--c: #2d8f4e; --d: 3" data-go="3">
+              <div class="mh"><i>🕸️</i><b>3. Peer-to-Peer</b></div>
+              <div class="mb">
+                <span class="ess">Equal peers share resources directly.</span
+                ><span class="row e">BitTorrent, Bitcoin</span
+                ><span class="row p">Scalable, no central failure point</span
+                ><span class="row c">Hard to secure &amp; manage</span>
+              </div>
+            </button>
+            <button class="mini anim" style="--c: #c27a12; --d: 4" data-go="4">
+              <div class="mh"><i>🔗</i><b>4. Pipe-and-Filter</b></div>
+              <div class="mb">
+                <span class="ess"
+                  >Data flows through chained transform steps.</span
+                ><span class="row e">Unix pipes, GCC</span
+                ><span class="row p">Reusable, composable filters</span
+                ><span class="row c">Poor for interactive apps</span>
+              </div>
+            </button>
+            <button class="mini anim" style="--c: #6b3fa0; --d: 5" data-go="5">
+              <div class="mh"><i>✉️</i><b>5. Messaging</b></div>
+              <div class="mb">
+                <span class="ess">Async messages through broker queues.</span
+                ><span class="row e">LinkedIn Kafka, order queues</span
+                ><span class="row p">Loose coupling, reliable delivery</span
+                ><span class="row c">Broker complexity, hard debugging</span>
+              </div>
+            </button>
+            <button class="mini anim" style="--c: #a33b6b; --d: 6" data-go="6">
+              <div class="mh"><i>⚡</i><b>6. Implicit Invocation</b></div>
+              <div class="mb">
+                <span class="ess"
+                  >Announced events trigger registered procedures.</span
+                ><span class="row e">Browser DOM events, DB triggers</span
+                ><span class="row p">Easy to extend</span
+                ><span class="row c">Unpredictable execution order</span>
+              </div>
+            </button>
+            <button class="mini anim" style="--c: #1db954; --d: 7" data-go="7">
+              <div class="mh">
+                <i>📡</i><b>7. Publish-Subscribe<em>Spotify</em></b>
+              </div>
+              <div class="mb">
+                <span class="ess"
+                  >Publishers post to topics; subscribers receive.</span
+                ><span class="row e">Spotify on Cloud Pub/Sub</span
+                ><span class="row p">Scales to many consumers</span
+                ><span class="row c">Hard to trace message flow</span>
+              </div>
+            </button>
+            <button class="mini anim" style="--c: #2c2255; --d: 8" data-go="8">
+              <div class="mh">
+                <i>🧩</i><b>8. Event-Based<em>Eclipse IDE</em></b>
+              </div>
+              <div class="mb">
+                <span class="ess">Plug-ins react to platform events.</span
+                ><span class="row e">Eclipse IDE, VS Code</span
+                ><span class="row p">Highly extensible</span
+                ><span class="row c">Complex control flow</span>
+              </div>
+            </button>
+            <button class="mini anim" style="--c: #0b6fb8; --d: 9" data-go="9">
+              <div class="mh"><i>🌐</i><b>9. Web Services</b></div>
+              <div class="mb">
+                <span class="ess"
+                  >Services exposed over HTTP (SOAP / REST).</span
+                ><span class="row e">Google Maps API, Expedia</span
+                ><span class="row p">Interoperable, platform-independent</span
+                ><span class="row c"
+                  >Network latency &amp; payload overhead</span
+                >
+              </div>
+            </button>
+            <button
+              class="mini anim"
+              style="--c: #d1495b; --d: 10"
+              data-go="10"
+            >
+              <div class="mh"><i>⬡</i><b>10. Microservices</b></div>
+              <div class="mb">
+                <span class="ess"
+                  >Small independent services, each owning its data.</span
+                ><span class="row e">Netflix</span
+                ><span class="row p">Independent deploy &amp; scaling</span
+                ><span class="row c">Distributed-system complexity</span>
+              </div>
+            </button>
+          </div>
+          <p class="hint anim" style="--d: 11">
+            Navigate with <kbd>←</kbd> <kbd>→</kbd>, the dots below, or swipe on
+            touch screens.
+          </p>
+        </div>
+      </section>
+
+      <!-- ================= 1 LAYERED ================= -->
+      <section class="slide" data-title="Layered (N-tier)" style="--c: #1f4e8c">
+        <div class="page">
+          <div class="dhead anim" style="--d: 0">
+            <div class="num">1</div>
+            <div class="icon">🧱</div>
+            <div>
+              <h2>Layered Architecture</h2>
+              <small>N-tier</small>
+            </div>
+          </div>
+          <div class="main">
+            <div class="left">
+              <p class="summary anim" style="--d: 1">
+                The system is organized into horizontal layers (e.g.
+                presentation, business, data). Each layer only uses the services
+                of the layer directly below it.
+              </p>
+              <div class="ex anim" style="--d: 2">
+                <div class="eicon">🤖</div>
+                <div>
+                  <h3>Real-life example</h3>
+                  <strong>Android OS platform stack</strong>
+                  <p>
+                    Apps → Java API Framework → Native libraries &amp; Android
+                    Runtime → Hardware Abstraction Layer → Linux kernel. The
+                    TCP/IP network stack follows the same idea.
+                  </p>
+                </div>
+              </div>
+              <div class="cols anim" style="--d: 3">
+                <div class="box pros">
+                  <h3>Pros</h3>
+                  <ul>
+                    <li>Clear separation of concerns</li>
+                    <li>Easy to test &amp; maintain per layer</li>
+                    <li>Layers replaceable / reusable</li>
+                  </ul>
+                </div>
+                <div class="box cons">
+                  <h3>Cons</h3>
+                  <ul>
+                    <li>Performance overhead across layers</li>
+                    <li>Changes may ripple through all layers</li>
+                    <li>Can become monolithic</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="ref anim" style="--d: 2">
+              <h3>🗺️ Reference architecture</h3>
+              <svg class="d" viewBox="0 0 300 140">
+                <rect class="b" x="40" y="4" width="220" height="24" rx="5" />
+                <text x="150" y="16">Presentation Layer (UI)</text>
+                <rect class="b" x="40" y="38" width="220" height="24" rx="5" />
+                <text x="150" y="50">Business / Application Layer</text>
+                <rect class="b" x="40" y="72" width="220" height="24" rx="5" />
+                <text x="150" y="84">Persistence / Data Access Layer</text>
+                <rect class="f" x="40" y="106" width="220" height="26" rx="5" />
+                <text class="w" x="150" y="119">Database Layer</text>
+                <line class="ln" x1="150" y1="28" x2="150" y2="37" />
+                <line class="ln" x1="150" y1="62" x2="150" y2="71" />
+                <line class="ln" x1="150" y1="96" x2="150" y2="105" />
+                <text class="lbl" x="20" y="68" transform="rotate(-90 20 68)">
+                  requests flow down
+                </text>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 2 CLIENT-SERVER ================= -->
+      <section class="slide" data-title="Client-Server" style="--c: #0f7c8c">
+        <div class="page">
+          <div class="dhead anim" style="--d: 0">
+            <div class="num">2</div>
+            <div class="icon">🖥️</div>
+            <div><h2>Client-Server</h2></div>
+          </div>
+          <div class="main">
+            <div class="left">
+              <p class="summary anim" style="--d: 1">
+                Clients send requests to a central server that provides services
+                or data and returns responses (e.g. web browser ↔ web server,
+                email).
+              </p>
+              <div class="ex anim" style="--d: 2">
+                <div class="eicon">🌐</div>
+                <div>
+                  <h3>Real-life example</h3>
+                  <strong>The World Wide Web &amp; email</strong>
+                  <p>
+                    Browsers such as Chrome request pages from web servers such
+                    as Apache or Nginx over HTTP. Email clients (Outlook, Gmail
+                    app) talk to mail servers over SMTP/IMAP.
+                  </p>
+                </div>
+              </div>
+              <div class="cols anim" style="--d: 3">
+                <div class="box pros">
+                  <h3>Pros</h3>
+                  <ul>
+                    <li>Centralized data &amp; control</li>
+                    <li>Easier security &amp; backups</li>
+                    <li>Thin clients, easy updates</li>
+                  </ul>
+                </div>
+                <div class="box cons">
+                  <h3>Cons</h3>
+                  <ul>
+                    <li>Server is a single point of failure</li>
+                    <li>Server can become a bottleneck</li>
+                    <li>Network dependency</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="ref anim" style="--d: 2">
+              <h3>🗺️ Reference architecture</h3>
+              <svg class="d" viewBox="0 0 300 140">
+                <rect class="b" x="8" y="10" width="78" height="26" rx="5" />
+                <text x="47" y="23">Client (Browser)</text>
+                <rect class="b" x="8" y="57" width="78" height="26" rx="5" />
+                <text x="47" y="70">Client (Mobile)</text>
+                <rect class="b" x="8" y="104" width="78" height="26" rx="5" />
+                <text x="47" y="117">Client (Desktop)</text>
+                <rect class="f" x="130" y="45" width="84" height="50" rx="6" />
+                <text class="w" x="172" y="64">Server</text>
+                <text class="ws" x="172" y="79">app logic + services</text>
+                <rect class="b" x="240" y="52" width="54" height="36" rx="12" />
+                <text x="267" y="70">Database</text>
+                <line class="ln bi" x1="86" y1="23" x2="129" y2="56" />
+                <line class="ln bi" x1="86" y1="70" x2="129" y2="70" />
+                <line class="ln bi" x1="86" y1="117" x2="129" y2="84" />
+                <line class="ln bi" x1="214" y1="70" x2="239" y2="70" />
+                <text class="lbl" x="108" y="8">request / response</text>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 3 P2P ================= -->
+      <section class="slide" data-title="Peer-to-Peer" style="--c: #2d8f4e">
+        <div class="page">
+          <div class="dhead anim" style="--d: 0">
+            <div class="num">3</div>
+            <div class="icon">🕸️</div>
+            <div><h2>Peer-to-Peer</h2></div>
+          </div>
+          <div class="main">
+            <div class="left">
+              <p class="summary anim" style="--d: 1">
+                All nodes are equal peers acting as both client and server,
+                sharing resources directly without a central coordinator.
+              </p>
+              <div class="ex anim" style="--d: 2">
+                <div class="eicon">🧲</div>
+                <div>
+                  <h3>Real-life example</h3>
+                  <strong>BitTorrent &amp; Bitcoin</strong>
+                  <p>
+                    In BitTorrent, every downloader also uploads pieces of the
+                    file to other peers. Bitcoin nodes share transactions and
+                    blocks with each other without a central server.
+                  </p>
+                </div>
+              </div>
+              <div class="cols anim" style="--d: 3">
+                <div class="box pros">
+                  <h3>Pros</h3>
+                  <ul>
+                    <li>Highly scalable</li>
+                    <li>No single point of failure</li>
+                    <li>Resources distributed among peers</li>
+                  </ul>
+                </div>
+                <div class="box cons">
+                  <h3>Cons</h3>
+                  <ul>
+                    <li>Hard to secure &amp; trust peers</li>
+                    <li>Difficult to manage / back up</li>
+                    <li>Inconsistent performance &amp; availability</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="ref anim" style="--d: 2">
+              <h3>🗺️ Reference architecture</h3>
+              <svg class="d" viewBox="0 0 300 140">
+                <g class="pl">
+                  <line x1="150" y1="20" x2="250" y2="55" />
+                  <line x1="150" y1="20" x2="215" y2="118" />
+                  <line x1="150" y1="20" x2="85" y2="118" />
+                  <line x1="150" y1="20" x2="50" y2="55" />
+                  <line x1="250" y1="55" x2="215" y2="118" />
+                  <line x1="250" y1="55" x2="85" y2="118" />
+                  <line x1="250" y1="55" x2="50" y2="55" />
+                  <line x1="215" y1="118" x2="85" y2="118" />
+                  <line x1="215" y1="118" x2="50" y2="55" />
+                  <line x1="85" y1="118" x2="50" y2="55" />
+                </g>
+                <circle class="f" cx="150" cy="20" r="17" />
+                <text class="w" x="150" y="20">Peer</text>
+                <circle class="f" cx="250" cy="55" r="17" />
+                <text class="w" x="250" y="55">Peer</text>
+                <circle class="f" cx="215" cy="118" r="17" />
+                <text class="w" x="215" y="118">Peer</text>
+                <circle class="f" cx="85" cy="118" r="17" />
+                <text class="w" x="85" y="118">Peer</text>
+                <circle class="f" cx="50" cy="55" r="17" />
+                <text class="w" x="50" y="55">Peer</text>
+                <text class="lbl" x="150" y="72">
+                  each peer = client + server
+                </text>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 4 PIPE-AND-FILTER ================= -->
+      <section class="slide" data-title="Pipe-and-Filter" style="--c: #c27a12">
+        <div class="page">
+          <div class="dhead anim" style="--d: 0">
+            <div class="num">4</div>
+            <div class="icon">🔗</div>
+            <div><h2>Pipe-and-Filter</h2></div>
+          </div>
+          <div class="main">
+            <div class="left">
+              <p class="summary anim" style="--d: 1">
+                Data streams through a chain of independent filters connected by
+                pipes; each filter transforms its input into output (e.g. Unix
+                pipes, compilers, ETL).
+              </p>
+              <div class="ex anim" style="--d: 2">
+                <div class="eicon">🐧</div>
+                <div>
+                  <h3>Real-life example</h3>
+                  <strong>Unix/Linux shell &amp; the GCC compiler</strong>
+                  <p>
+                    Shell commands are chained with "|" (cat | grep | sort). GCC
+                    runs source code through stages: preprocessor → compiler →
+                    assembler → linker.
+                  </p>
+                </div>
+              </div>
+              <div class="cols anim" style="--d: 3">
+                <div class="box pros">
+                  <h3>Pros</h3>
+                  <ul>
+                    <li>Filters reusable &amp; composable</li>
+                    <li>Easy to add / reorder steps</li>
+                    <li>Supports parallel / concurrent processing</li>
+                  </ul>
+                </div>
+                <div class="box cons">
+                  <h3>Cons</h3>
+                  <ul>
+                    <li>Not suited for interactive systems</li>
+                    <li>Data conversion overhead</li>
+                    <li>Error handling across chain is hard</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="ref anim" style="--d: 2">
+              <h3>🗺️ Reference architecture</h3>
+              <svg class="d" viewBox="0 0 300 140">
+                <text class="lbl" x="150" y="18">data stream →</text>
+                <rect class="b" x="3" y="50" width="46" height="36" rx="18" />
+                <text x="26" y="68">Source</text>
+                <rect class="f" x="61" y="50" width="46" height="36" rx="5" />
+                <text class="w" x="84" y="68">Filter 1</text>
+                <rect class="f" x="119" y="50" width="46" height="36" rx="5" />
+                <text class="w" x="142" y="68">Filter 2</text>
+                <rect class="f" x="177" y="50" width="46" height="36" rx="5" />
+                <text class="w" x="200" y="68">Filter 3</text>
+                <rect class="b" x="235" y="50" width="46" height="36" rx="18" />
+                <text x="258" y="68">Sink</text>
+                <line class="ln" x1="49" y1="68" x2="60" y2="68" />
+                <line class="ln" x1="107" y1="68" x2="118" y2="68" />
+                <line class="ln" x1="165" y1="68" x2="176" y2="68" />
+                <line class="ln" x1="223" y1="68" x2="234" y2="68" />
+                <text class="s" x="84" y="98">parse</text>
+                <text class="s" x="142" y="98">transform</text>
+                <text class="s" x="200" y="98">format</text>
+                <text class="lbl" x="55" y="40">pipe</text>
+                <text class="lbl" x="229" y="40">pipe</text>
+                <text class="lbl" x="150" y="122">
+                  e.g. cat log | grep ERROR | sort | uniq
+                </text>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 5 MESSAGING ================= -->
+      <section class="slide" data-title="Messaging" style="--c: #6b3fa0">
+        <div class="page">
+          <div class="dhead anim" style="--d: 0">
+            <div class="num">5</div>
+            <div class="icon">✉️</div>
+            <div><h2>Messaging</h2></div>
+          </div>
+          <div class="main">
+            <div class="left">
+              <p class="summary anim" style="--d: 1">
+                Components communicate asynchronously by sending messages
+                through a broker or queue (e.g. RabbitMQ, Kafka, JMS) instead of
+                calling each other directly.
+              </p>
+              <div class="ex anim" style="--d: 2">
+                <div class="eicon">🛒</div>
+                <div>
+                  <h3>Real-life example</h3>
+                  <strong
+                    >Amazon order processing &amp; LinkedIn (Apache
+                    Kafka)</strong
+                  >
+                  <p>
+                    When you place an order, steps like payment, warehouse and
+                    shipping are handled through message queues (e.g. Amazon
+                    SQS). LinkedIn built Kafka to move trillions of messages a
+                    day between its systems.
+                  </p>
+                </div>
+              </div>
+              <div class="cols anim" style="--d: 3">
+                <div class="box pros">
+                  <h3>Pros</h3>
+                  <ul>
+                    <li>Loose coupling of components</li>
+                    <li>Reliable, buffered delivery</li>
+                    <li>Handles load peaks well</li>
+                  </ul>
+                </div>
+                <div class="box cons">
+                  <h3>Cons</h3>
+                  <ul>
+                    <li>Extra infrastructure (broker)</li>
+                    <li>Harder debugging &amp; tracing</li>
+                    <li>Eventual consistency, latency</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="ref anim" style="--d: 2">
+              <h3>🗺️ Reference architecture</h3>
+              <svg class="d" viewBox="0 0 300 140">
+                <rect class="b" x="6" y="20" width="72" height="28" rx="5" />
+                <text x="42" y="34">Producer A</text>
+                <rect class="b" x="6" y="88" width="72" height="28" rx="5" />
+                <text x="42" y="102">Producer B</text>
+                <rect class="b" x="104" y="28" width="100" height="80" rx="8" />
+                <text x="154" y="42">Message Broker</text>
+                <rect class="f" x="118" y="58" width="14" height="22" rx="2" />
+                <rect class="f" x="136" y="58" width="14" height="22" rx="2" />
+                <rect class="f" x="154" y="58" width="14" height="22" rx="2" />
+                <rect class="f" x="172" y="58" width="14" height="22" rx="2" />
+                <text class="s" x="154" y="94">Queue (FIFO)</text>
+                <rect class="b" x="228" y="20" width="68" height="28" rx="5" />
+                <text x="262" y="34">Consumer A</text>
+                <rect class="b" x="228" y="88" width="68" height="28" rx="5" />
+                <text x="262" y="102">Consumer B</text>
+                <line class="ln" x1="78" y1="34" x2="103" y2="55" />
+                <line class="ln" x1="78" y1="102" x2="103" y2="82" />
+                <line class="ln" x1="204" y1="55" x2="227" y2="34" />
+                <line class="ln" x1="204" y1="82" x2="227" y2="102" />
+                <text class="lbl" x="90" y="130">send (async)</text>
+                <text class="lbl" x="216" y="130">receive / ack</text>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 6 IMPLICIT INVOCATION ================= -->
+      <section
+        class="slide"
+        data-title="Implicit Invocation"
+        style="--c: #a33b6b"
+      >
+        <div class="page">
+          <div class="dhead anim" style="--d: 0">
+            <div class="num">6</div>
+            <div class="icon">⚡</div>
+            <div><h2>Implicit Invocation</h2></div>
+          </div>
+          <div class="main">
+            <div class="left">
+              <p class="summary anim" style="--d: 1">
+                Instead of calling procedures directly, a component announces an
+                event; other components register interest and are invoked
+                automatically when it occurs.
+              </p>
+              <div class="ex anim" style="--d: 2">
+                <div class="eicon">🖱️</div>
+                <div>
+                  <h3>Real-life example</h3>
+                  <strong
+                    >Web browser DOM events &amp; database triggers</strong
+                  >
+                  <p>
+                    JavaScript handlers registered with
+                    addEventListener("click", …) run automatically when you
+                    click a button. Database triggers (Oracle, SQL Server) run
+                    when a row is inserted or updated.
+                  </p>
+                </div>
+              </div>
+              <div class="cols anim" style="--d: 3">
+                <div class="box pros">
+                  <h3>Pros</h3>
+                  <ul>
+                    <li>Strong decoupling</li>
+                    <li>Easy to add new components</li>
+                    <li>Supports reuse &amp; evolution</li>
+                  </ul>
+                </div>
+                <div class="box cons">
+                  <h3>Cons</h3>
+                  <ul>
+                    <li>No control over execution order</li>
+                    <li>Hard to reason about correctness</li>
+                    <li>Difficult to debug</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="ref anim" style="--d: 2">
+              <h3>🗺️ Reference architecture</h3>
+              <svg class="d" viewBox="0 0 300 140">
+                <rect class="b" x="6" y="52" width="76" height="36" rx="5" />
+                <text x="44" y="64">Component A</text>
+                <text class="s" x="44" y="78">announces event</text>
+                <rect class="f" x="108" y="42" width="94" height="56" rx="6" />
+                <text class="w" x="155" y="62">Event Manager</text>
+                <text class="ws" x="155" y="78">registry of listeners</text>
+                <rect class="b" x="228" y="8" width="66" height="28" rx="5" />
+                <text x="261" y="22">Procedure B</text>
+                <rect class="b" x="228" y="56" width="66" height="28" rx="5" />
+                <text x="261" y="70">Procedure C</text>
+                <rect class="b" x="228" y="104" width="66" height="28" rx="5" />
+                <text x="261" y="118">Procedure D</text>
+                <line class="ln" x1="82" y1="70" x2="107" y2="70" />
+                <line class="ln" x1="202" y1="56" x2="227" y2="24" />
+                <line class="ln" x1="202" y1="70" x2="227" y2="70" />
+                <line class="ln" x1="202" y1="84" x2="227" y2="116" />
+                <text class="lbl" x="95" y="60">event</text>
+                <text class="lbl" x="155" y="122">invokes registered</text>
+                <text class="lbl" x="155" y="132">procedures implicitly</text>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 7 PUB-SUB ================= -->
+      <section
+        class="slide"
+        data-title="Publish-Subscribe"
+        style="--c: #1db954"
+      >
+        <div class="page">
+          <div class="dhead anim" style="--d: 0">
+            <div class="num">7</div>
+            <div class="icon">📡</div>
+            <div>
+              <h2>Publish-Subscribe</h2>
+              <small>Example: Spotify</small>
+            </div>
+          </div>
+          <div class="main">
+            <div class="left">
+              <p class="summary anim" style="--d: 1">
+                Publishers send messages to topics without knowing who receives
+                them; subscribers receive every message for the topics they
+                follow.
+              </p>
+              <div class="ex anim" style="--d: 2">
+                <div class="eicon">🎧</div>
+                <div>
+                  <h3>Real-life example</h3>
+                  <strong>Spotify event delivery (Google Cloud Pub/Sub)</strong>
+                  <p>
+                    Every song play, skip or search is published as an event.
+                    Recommendation, royalty and analytics systems subscribe to
+                    these events. Spotify moved this pipeline to Google Cloud
+                    Pub/Sub in 2016.
+                  </p>
+                </div>
+              </div>
+              <div class="cols anim" style="--d: 3">
+                <div class="box pros">
+                  <h3>Pros</h3>
+                  <ul>
+                    <li>Publishers &amp; subscribers fully decoupled</li>
+                    <li>Scales to many consumers</li>
+                    <li>Subscribers added dynamically</li>
+                  </ul>
+                </div>
+                <div class="box cons">
+                  <h3>Cons</h3>
+                  <ul>
+                    <li>Delivery / ordering guarantees vary</li>
+                    <li>Hard to trace message flow</li>
+                    <li>Topic / schema management overhead</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="ref anim" style="--d: 2">
+              <h3>🗺️ Reference architecture (Spotify-style)</h3>
+              <svg class="d" viewBox="0 0 300 140">
+                <rect class="b" x="4" y="18" width="80" height="30" rx="5" />
+                <text x="44" y="28">Publisher</text>
+                <text class="s" x="44" y="40">Playback Svc</text>
+                <rect class="b" x="4" y="90" width="80" height="30" rx="5" />
+                <text x="44" y="100">Publisher</text>
+                <text class="s" x="44" y="112">Catalog / Upload</text>
+                <rect class="f" x="108" y="30" width="88" height="80" rx="6" />
+                <text class="w" x="152" y="44">Pub/Sub Broker</text>
+                <rect
+                  x="114"
+                  y="56"
+                  width="76"
+                  height="16"
+                  rx="3"
+                  fill="#ffffff"
+                  opacity=".9"
+                />
+                <text class="s" x="152" y="64">topic: song.played</text>
+                <rect
+                  x="114"
+                  y="78"
+                  width="76"
+                  height="16"
+                  rx="3"
+                  fill="#ffffff"
+                  opacity=".9"
+                />
+                <text class="s" x="152" y="86">topic: track.added</text>
+                <rect class="b" x="220" y="6" width="76" height="28" rx="5" />
+                <text x="258" y="20">Recommendations</text>
+                <rect class="b" x="220" y="56" width="76" height="28" rx="5" />
+                <text x="258" y="70">Royalties</text>
+                <rect class="b" x="220" y="106" width="76" height="28" rx="5" />
+                <text x="258" y="120">Analytics</text>
+                <line class="ln" x1="84" y1="33" x2="107" y2="55" />
+                <line class="ln" x1="84" y1="105" x2="107" y2="86" />
+                <line class="ln" x1="196" y1="55" x2="219" y2="20" />
+                <line class="ln" x1="196" y1="70" x2="219" y2="70" />
+                <line class="ln" x1="196" y1="86" x2="219" y2="120" />
+                <text class="lbl" x="96" y="70">publish</text>
+                <text class="lbl" x="208" y="48">subscribe</text>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 8 EVENT-BASED ================= -->
+      <section class="slide" data-title="Event-Based" style="--c: #2c2255">
+        <div class="page">
+          <div class="dhead anim" style="--d: 0">
+            <div class="num">8</div>
+            <div class="icon">🧩</div>
+            <div>
+              <h2>Event-Based</h2>
+              <small>Example: Eclipse IDE</small>
+            </div>
+          </div>
+          <div class="main">
+            <div class="left">
+              <p class="summary anim" style="--d: 1">
+                Components produce and react to events. Eclipse plug-ins
+                register listeners and extension points, reacting to editor,
+                workspace and UI events.
+              </p>
+              <div class="ex anim" style="--d: 2">
+                <div class="eicon">🌘</div>
+                <div>
+                  <h3>Real-life example</h3>
+                  <strong>Eclipse IDE (also VS Code extensions)</strong>
+                  <p>
+                    When you save a file, Eclipse fires a resource-change event;
+                    the Java builder, Git and error markers each react on their
+                    own. VS Code works similarly, loading extensions on
+                    "activation events".
+                  </p>
+                </div>
+              </div>
+              <div class="cols anim" style="--d: 3">
+                <div class="box pros">
+                  <h3>Pros</h3>
+                  <ul>
+                    <li>Highly extensible (plug-ins)</li>
+                    <li>Responsive, reactive behavior</li>
+                    <li>Components developed independently</li>
+                  </ul>
+                </div>
+                <div class="box cons">
+                  <h3>Cons</h3>
+                  <ul>
+                    <li>Complex, non-linear control flow</li>
+                    <li>Testing event chains is hard</li>
+                    <li>Risk of event storms / leaks</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="ref anim" style="--d: 2">
+              <h3>🗺️ Reference architecture (Eclipse-style)</h3>
+              <svg class="d" viewBox="0 0 300 140">
+                <rect class="f" x="95" y="36" width="110" height="68" rx="6" />
+                <text class="w" x="150" y="52">Eclipse Platform</text>
+                <text class="ws" x="150" y="67">Runtime (OSGi)</text>
+                <text class="ws" x="150" y="80">Event Bus +</text>
+                <text class="ws" x="150" y="91">Extension Registry</text>
+                <rect class="b" x="4" y="8" width="76" height="26" rx="5" />
+                <text x="42" y="21">JDT (Java tools)</text>
+                <rect class="b" x="4" y="57" width="76" height="26" rx="5" />
+                <text x="42" y="70">Workspace</text>
+                <rect class="b" x="4" y="106" width="76" height="26" rx="5" />
+                <text x="42" y="119">EGit plug-in</text>
+                <rect class="b" x="220" y="8" width="76" height="26" rx="5" />
+                <text x="258" y="21">Debugger</text>
+                <rect class="b" x="220" y="57" width="76" height="26" rx="5" />
+                <text x="258" y="70">Editors / UI</text>
+                <rect class="b" x="220" y="106" width="76" height="26" rx="5" />
+                <text x="258" y="119">Your plug-in</text>
+                <line class="ln bi" x1="80" y1="21" x2="94" y2="46" />
+                <line class="ln bi" x1="80" y1="70" x2="94" y2="70" />
+                <line class="ln bi" x1="80" y1="119" x2="94" y2="94" />
+                <line class="ln bi" x1="206" y1="46" x2="219" y2="21" />
+                <line class="ln bi" x1="206" y1="70" x2="219" y2="70" />
+                <line class="ln bi" x1="206" y1="94" x2="219" y2="119" />
+                <text class="lbl" x="150" y="122">
+                  fire events / notify listeners
+                </text>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 9 WEB SERVICES ================= -->
+      <section class="slide" data-title="Web Services" style="--c: #0b6fb8">
+        <div class="page">
+          <div class="dhead anim" style="--d: 0">
+            <div class="num">9</div>
+            <div class="icon">🌐</div>
+            <div><h2>Web Services</h2></div>
+          </div>
+          <div class="main">
+            <div class="left">
+              <p class="summary anim" style="--d: 1">
+                Functionality is exposed as services over standard web protocols
+                (HTTP, SOAP/WSDL, REST/JSON), so machines can talk to each other
+                across platforms.
+              </p>
+              <div class="ex anim" style="--d: 2">
+                <div class="eicon">✈️</div>
+                <div>
+                  <h3>Real-life example</h3>
+                  <strong
+                    >Travel booking sites &amp; the Google Maps API</strong
+                  >
+                  <p>
+                    Sites like Expedia and Skyscanner pull flight and hotel data
+                    from airline and hotel web services. Uber and many other
+                    apps call the Google Maps API for maps and routes.
+                  </p>
+                </div>
+              </div>
+              <div class="cols anim" style="--d: 3">
+                <div class="box pros">
+                  <h3>Pros</h3>
+                  <ul>
+                    <li>Platform &amp; language independent</li>
+                    <li>Standard, interoperable protocols</li>
+                    <li>Reuse of services across apps</li>
+                  </ul>
+                </div>
+                <div class="box cons">
+                  <h3>Cons</h3>
+                  <ul>
+                    <li>Network latency</li>
+                    <li>Payload overhead (XML/JSON)</li>
+                    <li>Versioning &amp; security challenges</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="ref anim" style="--d: 2">
+              <h3>🗺️ Reference architecture (SOA triangle)</h3>
+              <svg class="d" viewBox="0 0 300 140">
+                <rect class="f" x="100" y="4" width="100" height="34" rx="6" />
+                <text class="w" x="150" y="16">Service Registry</text>
+                <text class="ws" x="150" y="29">UDDI / API catalog</text>
+                <rect class="b" x="6" y="96" width="96" height="36" rx="6" />
+                <text x="54" y="108">Service Consumer</text>
+                <text class="s" x="54" y="121">client app</text>
+                <rect class="b" x="198" y="96" width="96" height="36" rx="6" />
+                <text x="246" y="108">Service Provider</text>
+                <text class="s" x="246" y="121">WSDL / OpenAPI</text>
+                <line class="ln" x1="236" y1="95" x2="182" y2="39" />
+                <line class="ln" x1="64" y1="95" x2="118" y2="39" />
+                <line class="ln bi" x1="103" y1="114" x2="197" y2="114" />
+                <text class="lbl" x="243" y="64">1. publish</text>
+                <text class="lbl" x="58" y="64">2. find</text>
+                <text class="lbl" x="150" y="104">3. bind / invoke</text>
+                <text class="lbl" x="150" y="126">SOAP or REST over HTTP</text>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 10 MICROSERVICES ================= -->
+      <section class="slide" data-title="Microservices" style="--c: #d1495b">
+        <div class="page">
+          <div class="dhead anim" style="--d: 0">
+            <div class="num">10</div>
+            <div class="icon">⬡</div>
+            <div><h2>Microservices</h2></div>
+          </div>
+          <div class="main">
+            <div class="left">
+              <p class="summary anim" style="--d: 1">
+                The application is built as a set of small, independently
+                deployable services. Each owns its data and one business
+                capability, and they talk via APIs or messaging.
+              </p>
+              <div class="ex anim" style="--d: 2">
+                <div class="eicon">🎬</div>
+                <div>
+                  <h3>Real-life example</h3>
+                  <strong>Netflix</strong>
+                  <p>
+                    After a major database outage in 2008, Netflix split its
+                    monolith into hundreds of microservices on AWS (streaming,
+                    billing, recommendations), each deployed and scaled on its
+                    own. Amazon and Uber use the same approach.
+                  </p>
+                </div>
+              </div>
+              <div class="cols anim" style="--d: 3">
+                <div class="box pros">
+                  <h3>Pros</h3>
+                  <ul>
+                    <li>Independent deployment &amp; scaling</li>
+                    <li>Technology freedom per service</li>
+                    <li>Fault isolation</li>
+                  </ul>
+                </div>
+                <div class="box cons">
+                  <h3>Cons</h3>
+                  <ul>
+                    <li>Distributed-system complexity</li>
+                    <li>Data consistency is hard</li>
+                    <li>High DevOps / monitoring effort</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="ref anim" style="--d: 2">
+              <h3>🗺️ Reference architecture</h3>
+              <svg class="d" viewBox="0 0 300 140">
+                <rect class="b" x="4" y="55" width="50" height="30" rx="5" />
+                <text x="29" y="70">Clients</text>
+                <rect class="f" x="72" y="38" width="58" height="64" rx="6" />
+                <text class="w" x="101" y="64">API</text>
+                <text class="w" x="101" y="77">Gateway</text>
+                <rect class="b" x="152" y="8" width="70" height="26" rx="5" />
+                <text x="187" y="21">Orders Svc</text>
+                <rect class="b" x="152" y="57" width="70" height="26" rx="5" />
+                <text x="187" y="70">Users Svc</text>
+                <rect class="b" x="152" y="106" width="70" height="26" rx="5" />
+                <text x="187" y="119">Payment Svc</text>
+                <rect class="f" x="242" y="8" width="52" height="26" rx="11" />
+                <text class="ws" x="268" y="21">Orders DB</text>
+                <rect class="f" x="242" y="57" width="52" height="26" rx="11" />
+                <text class="ws" x="268" y="70">Users DB</text>
+                <rect
+                  class="f"
+                  x="242"
+                  y="106"
+                  width="52"
+                  height="26"
+                  rx="11"
+                />
+                <text class="ws" x="268" y="119">Payment DB</text>
+                <line class="ln" x1="54" y1="70" x2="71" y2="70" />
+                <line class="ln" x1="130" y1="50" x2="151" y2="21" />
+                <line class="ln" x1="130" y1="70" x2="151" y2="70" />
+                <line class="ln" x1="130" y1="90" x2="151" y2="119" />
+                <line class="ln bi" x1="222" y1="21" x2="241" y2="21" />
+                <line class="ln bi" x1="222" y1="70" x2="241" y2="70" />
+                <line class="ln bi" x1="222" y1="119" x2="241" y2="119" />
+                <line
+                  class="dash"
+                  x1="145"
+                  y1="38"
+                  x2="145"
+                  y2="102"
+                  stroke="#9fb0c4"
+                />
+                <text class="lbl" x="101" y="118">REST / gRPC</text>
+                <text class="lbl" x="187" y="46">database per service</text>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="nav" aria-label="Page navigation">
+      <button class="btn ghost" id="toSummary">☰ Summary</button>
+      <button class="btn" id="prev" aria-label="Previous page">← Prev</button>
+      <div class="dots" id="dots"></div>
+      <button class="btn" id="next" aria-label="Next page">Next →</button>
+    </nav>
+
+    <script>
+      (function () {
+        const slides = Array.from(document.querySelectorAll(".slide"));
+        const dotsWrap = document.getElementById("dots");
+        const where = document.getElementById("where");
+        const bar = document.getElementById("bar");
+        const prev = document.getElementById("prev");
+        const next = document.getElementById("next");
+        const last = slides.length - 1;
+        let cur = -1;
+
+        slides.forEach(function (s, i) {
+          s.classList.add("after");
+          const d = document.createElement("button");
+          d.className = "dot";
+          d.title = s.dataset.title;
+          d.setAttribute("aria-label", "Go to " + s.dataset.title);
+          d.addEventListener("click", function () {
+            go(i);
+          });
+          dotsWrap.appendChild(d);
+        });
+        const dots = Array.from(dotsWrap.children);
+
+        function go(i) {
+          i = Math.max(0, Math.min(last, i));
+          if (i === cur) return;
+          slides.forEach(function (s, k) {
+            s.classList.toggle("active", k === i);
+            s.classList.toggle("before", k < i);
+            s.classList.toggle("after", k > i);
+            s.setAttribute("aria-hidden", k === i ? "false" : "true");
+            s.inert = k !== i;
+          });
+          dots.forEach(function (d, k) {
+            d.classList.toggle("on", k === i);
+          });
+          cur = i;
+          slides[i].scrollTop = 0;
+          where.textContent =
+            i === 0
+              ? "Summary · " + last + " styles"
+              : "Page " + i + " of " + last + " · " + slides[i].dataset.title;
+          bar.style.width = (i / last) * 100 + "%";
+          prev.disabled = i === 0;
+          next.disabled = i === last;
+          try {
+            history.replaceState(null, "", "#" + i);
+          } catch (e) {
+            /* sandboxed */
+          }
+        }
+
+        prev.addEventListener("click", function () {
+          go(cur - 1);
+        });
+        next.addEventListener("click", function () {
+          go(cur + 1);
+        });
+        document
+          .getElementById("toSummary")
+          .addEventListener("click", function () {
+            go(0);
+          });
+        document.querySelectorAll("[data-go]").forEach(function (el) {
+          el.addEventListener("click", function () {
+            go(parseInt(el.dataset.go, 10));
+          });
+        });
+
+        document.addEventListener("keydown", function (e) {
+          if (e.altKey || e.ctrlKey || e.metaKey) return;
+          if (e.key === "ArrowRight" || e.key === "PageDown") {
+            e.preventDefault();
+            go(cur + 1);
+          } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+            e.preventDefault();
+            go(cur - 1);
+          } else if (e.key === "Home") {
+            e.preventDefault();
+            go(0);
+          } else if (e.key === "End") {
+            e.preventDefault();
+            go(last);
+          }
+        });
+
+        // Touch swipe
+        let sx = null,
+          sy = null;
+        const stage = document.getElementById("stage");
+        stage.addEventListener(
+          "touchstart",
+          function (e) {
+            sx = e.touches[0].clientX;
+            sy = e.touches[0].clientY;
+          },
+          { passive: true },
+        );
+        stage.addEventListener(
+          "touchend",
+          function (e) {
+            if (sx === null) return;
+            const dx = e.changedTouches[0].clientX - sx,
+              dy = e.changedTouches[0].clientY - sy;
+            if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5)
+              go(cur + (dx < 0 ? 1 : -1));
+            sx = sy = null;
+          },
+          { passive: true },
+        );
+
+        let start = parseInt((location.hash || "").slice(1), 10);
+        if (isNaN(start)) start = 0;
+        requestAnimationFrame(function () {
+          go(start);
+        });
+      })();
+    </script>
+  </body>
+</html>
